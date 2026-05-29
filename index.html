@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>World Clock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0d0f;--surface:#16161a;--surface2:#1e1e24;--surface3:#252530;
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);
+  --text:#f0eff4;--muted:#7a798a;--muted2:#5a5968;
+  --accent:#c8f564;--accent2:#a3d94a;--accent-dim:rgba(200,245,100,0.10);
+  --red:#ff6b6b;--blue:#6eb5ff;--gold:#ffd166;
+  --mono:'Space Mono',monospace;--sans:'DM Sans',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;padding:24px;position:relative}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;padding-bottom:18px;border-bottom:0.5px solid var(--border);flex-wrap:wrap;gap:16px}
+.header-left{display:flex;align-items:center;gap:16px}
+header h1{font-family:var(--mono);font-size:17px;font-weight:700;letter-spacing:-0.5px;color:var(--accent)}
+header span{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.header-controls{display:flex;align-items:center;gap:12px}
+
+.save-banner-btn{background:var(--accent);color:#0d0d0f;font-family:var(--sans);font-size:11px;font-weight:600;padding:4px 10px;border:none;border-radius:6px;cursor:pointer;display:none;align-items:center;gap:4px;transition:background 0.15s,transform 0.1s}
+.save-banner-btn:hover{background:var(--accent2)}
+.save-banner-btn:active{transform:scale(0.97)}
+
+.setting-select-wrap{display:flex;align-items:center;background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:3px 8px;gap:6px}
+.setting-select-wrap label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em}
+.setting-select-wrap select{background:transparent;border:none;color:var(--text);font-family:var(--sans);font-size:11px;font-weight:500;outline:none;cursor:pointer}
+
+.clocks-row{display:flex;gap:14px;margin-bottom:28px;overflow-x:auto;padding-bottom:12px;align-items:stretch}
+.clocks-row::-webkit-scrollbar{height:3px}
+.clocks-row::-webkit-scrollbar-track{background:var(--surface);border-radius:2px}
+.clocks-row::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.clock-card{background:var(--surface);border:0.5px solid var(--border);border-radius:16px;padding:18px 16px 14px;min-width:160px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:9px;position:relative;transition:border-color 0.2s, opacity 0.2s, transform 0.2s;justify-content:center}
+.clock-card:not(.primary){cursor:grab}
+.clock-card:not(.primary):active {cursor:grabbing}
+.clock-card:hover{border-color:var(--border2)}
+.clock-card.primary{border-color:rgba(200,245,100,0.3)}
+.clock-card.dragging {opacity: 0.4;transform: scale(0.95);border: 0.5px dashed var(--accent)}
+.clock-label{font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);text-align:center;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;user-select:none}
+.clock-card.primary .clock-label{color:var(--accent)}
+.analog-clock{width:96px;height:96px;user-select:none;pointer-events:none}
+.analog-clock svg{width:100%;height:100%}
+.digital-time{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--text);letter-spacing:0.04em;user-select:none}
+.clock-date{font-size:10px;color:var(--muted);font-family:var(--mono);margin-top:-2px;user-select:none}
+.clock-offset-row{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted);font-family:var(--mono);user-select:none}
+.dst-tag{font-size:8px;font-weight:700;padding:1px 4px;border-radius:4px;letter-spacing:0.03em}
+.dst-tag.is-dst{background:rgba(255,209,102,0.12);color:var(--gold)}
+.dst-tag.is-std{background:rgba(110,181,255,0.12);color:var(--blue)}
+.remove-btn{position:absolute;top:7px;right:7px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;line-height:1;padding:2px 4px;border-radius:4px;opacity:0;transition:opacity 0.15s,color 0.15s;z-index:10}
+.clock-card:hover .remove-btn{opacity:1}
+.remove-btn:hover{color:var(--red)}
+.add-clock-card{background:transparent;border:0.5px dashed var(--border);border-radius:16px;padding:18px 16px;min-width:130px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;cursor:pointer;transition:border-color 0.2s,background 0.2s;color:var(--muted);min-height:175px}
+.add-clock-card:hover{border-color:var(--accent);background:var(--accent-dim);color:var(--accent)}
+.add-clock-card span:first-child{font-size:22px}
+.add-clock-card span:last-child{font-size:11px;font-weight:500}
+
+.alarm-section{background:var(--surface);border:0.5px solid var(--border);border-radius:16px;padding:18px;margin-bottom:28px;display:flex;flex-direction:column;gap:14px}
+.alarm-form-row{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end}
+.alarm-field{display:flex;flex-direction:column;gap:6px}
+.alarm-field label{font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted)}
+.alarm-field input, .alarm-field select{background:var(--surface2);border:0.5px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--sans);font-size:13px;padding:8px 12px;outline:none;min-height:38px;transition:border-color 0.15s}
+.alarm-field input:focus, .alarm-field select:focus{border-color:var(--accent)}
+
+.alarm-field input[type="time"]{font-family:var(--mono);width:145px;letter-spacing:0.04em}
+.alarm-field select{cursor:pointer;min-width:180px;max-width:240px}
+.alarm-field input[type="text"]{min-width:200px;flex-grow:1}
+.btn-add-alarm{background:var(--accent-dim);color:var(--accent);border:0.5px solid rgba(200,245,100,0.2);padding:0 20px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;height:38px;transition:all 0.15s;white-space:nowrap}
+.btn-add-alarm:hover{background:var(--accent);color:#0d0d0f}
+.alarms-list{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}
+.alarm-item-card{background:var(--surface2);border:0.5px solid var(--border);border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:12px;font-size:12px;font-family:var(--sans)}
+.alarm-item-info{display:flex;flex-direction:column;gap:2px}
+.alarm-item-time{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--accent)}
+.alarm-item-label{font-size:10px;color:var(--muted);display:flex;flex-direction:column;gap:1px}
+.alarm-item-delete{background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:2px;line-height:1;transition:color 0.1s}
+.alarm-item-delete:hover{color:var(--red)}
+
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.section-title{font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted)}
+.table-wrap{background:var(--surface);border:0.5px solid var(--border);border-radius:16px;overflow:hidden;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{background:var(--surface2);padding:11px 14px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--muted);border-bottom:0.5px solid var(--border);white-space:nowrap;position:relative}
+thead th:first-child{color:var(--accent)}
+thead th .th-remove{display:inline-block;margin-left:5px;cursor:pointer;color:var(--muted);opacity:0;font-size:10px;transition:opacity 0.15s,color 0.15s}
+thead th:hover .th-remove{opacity:1}
+.th-remove:hover{color:var(--red)}
+tbody tr{border-bottom:0.5px solid var(--border);transition:background 0.1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:rgba(255,255,255,0.022)}
+tbody tr.highlight{background:rgba(200,245,100,0.04)}
+td{padding:9px 14px;font-family:var(--mono);font-size:12px;white-space:nowrap;color:var(--text)}
+td:first-child{font-size:11px;color:var(--muted);font-family:var(--sans);font-weight:400}
+td.current-col{color:var(--accent);font-weight:700}
+.table-date-label{font-size:9px;color:var(--muted);margin-left:6px;opacity:0.85}
+.add-col-btn{background:none;border:0.5px dashed var(--border2);color:var(--muted);padding:5px 12px;border-radius:8px;font-size:11px;font-family:var(--sans);cursor:pointer;display:flex;align-items:center;gap:5px;transition:color 0.15s,border-color 0.15s,background 0.15s}
+.add-col-btn:hover{color:var(--accent);border-color:var(--accent);background:var(--accent-dim)}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:0.5px solid var(--border2);border-radius:20px;padding:26px;width:480px;max-width:calc(100vw - 32px);max-height:90vh;overflow-y:auto}
+.modal h2{font-size:15px;font-weight:600;margin-bottom:18px;color:var(--text)}
+.modal label{display:block;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;margin-top:14px}
+.modal label:first-of-type{margin-top:0}
+.search-wrap{position:relative;margin-bottom:10px}
+.search-wrap input{width:100%;background:var(--surface2);border:0.5px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--sans);font-size:13px;padding:9px 14px;outline:none;transition:border-color 0.15s}
+.search-wrap input:focus{border-color:var(--accent)}
+.tz-list{background:var(--surface2);border:0.5px solid var(--border2);border-radius:10px;max-height:260px;overflow-y:auto;margin-bottom:4px}
+.tz-list::-webkit-scrollbar{width:4px}
+.tz-list::-webkit-scrollbar-track{background:transparent}
+.tz-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.tz-group-label{padding:8px 12px 4px;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted2);background:var(--surface3);position:sticky;top:0;z-index:1}
+.tz-item{padding:8px 12px;cursor:pointer;display:flex;align-items:flex-start;gap:10px;transition:background 0.1s;border-bottom:0.5px solid var(--border)}
+.tz-item:last-child{border-bottom:none}
+.tz-item:hover,.tz-item.selected{background:var(--accent-dim)}
+.tz-item.selected{border-left:2px solid var(--accent)}
+.tz-item-left{flex:1;min-width:0}
+.tz-item-name{font-size:13px;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tz-item-countries{font-size:10px;color:var(--muted);margin-top:2px;line-height:1.4}
+.tz-item-right{flex-shrink:0;text-align:right}
+.tz-item-offset{font-family:var(--mono);font-size:11px;color:var(--accent);font-weight:700}
+.tz-item-abbr{font-size:9px;color:var(--muted);margin-top:1px}
+.no-results{padding:20px;text-align:center;color:var(--muted);font-size:13px}
+.modal input[type=text]{width:100%;background:var(--surface2);border:0.5px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--sans);font-size:13px;padding:9px 12px;outline:none;transition:border-color 0.15s}
+.modal input[type=text]:focus{border-color:var(--accent)}
+.modal-btns{display:flex;gap:10px;margin-top:22px}
+.btn-primary{flex:1;background:var(--accent);color:#0d0d0f;border:none;border-radius:10px;padding:10px;font-size:13px;font-weight:600;font-family:var(--sans);cursor:pointer;transition:background 0.15s}
+.btn-primary:hover{background:var(--accent2)}
+.btn-secondary{flex:1;background:none;color:var(--muted);border:0.5px solid var(--border2);border-radius:10px;padding:10px;font-size:13px;font-family:var(--sans);cursor:pointer;transition:color 0.15s}
+.btn-secondary:hover{color:var(--text)}
+.now-badge{display:inline-block;background:var(--accent-dim);color:var(--accent);font-size:8px;font-weight:700;letter-spacing:0.08em;padding:1px 5px;border-radius:4px;text-transform:uppercase;vertical-align:middle;margin-left:5px}
+.selected-tz-display{font-size:11px;color:var(--muted);margin-top:4px;margin-bottom:2px;min-height:16px}
+
+.toast-notif{position:fixed;bottom:24px;right:24px;background:var(--surface);border:0.5px solid var(--border2);padding:12px 18px;border-radius:12px;display:flex;align-items:center;gap:12px;box-shadow:0 10px 30px rgba(0,0,0,0.5);transform:translateY(120%);opacity:0;transition:transform 0.3s cubic-bezier(0.175,0.885,0.32,1.275),opacity 0.25s;z-index:9999}
+.toast-notif.show{transform:translateY(0);opacity:1}
+.toast-msg{font-family:var(--sans);font-size:12px;font-weight:500;color:var(--text);display:flex;align-items:center;gap:6px}
+.toast-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px;line-height:1;border-radius:4px;transition:color 0.1s}
+.toast-close:hover{color:var(--text)}
+
+.alarm-overlay{display:none;position:fixed;inset:0;background:rgba(255,107,107,0.15);backdrop-filter:blur(4px);z-index:10000;align-items:center;justify-content:center;animation:pulseRed 1.5s infinite alternate}
+.alarm-overlay.open{display:flex}
+.alarm-alert-card{background:#1e1414;border:1px solid var(--red);border-radius:20px;padding:32px;width:400px;text-align:center;box-shadow:0 15px 40px rgba(0,0,0,0.6)}
+.alarm-alert-title{font-size:24px;color:var(--red);font-family:var(--mono);font-weight:700;margin-bottom:8px}
+.alarm-alert-desc{font-size:14px;color:var(--text);margin-bottom:24px}
+.btn-dismiss-alarm{background:var(--red);color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:600;font-family:var(--sans);cursor:pointer;width:100%;transition:background 0.15s}
+.btn-dismiss-alarm:hover{background:#ff4d4d}
+@keyframes pulseRed{from{background:rgba(255,107,107,0.1)}to{background:rgba(255,107,107,0.3)}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>⏱ WORLD CLOCK</h1>
+    <button class="save-banner-btn" id="save-banner" onclick="saveActiveConfig()">💾 Save Changes</button>
+  </div>
+  
+  <div class="header-controls">
+    <div class="setting-select-wrap">
+      <label>Clock Style:</label>
+      <select id="clock-style-setting" onchange="changeClockStyleView()">
+        <option value="both">Analog & Digital</option>
+        <option value="analog">Analog Only</option>
+        <option value="digital">Digital Only</option>
+      </select>
+    </div>
+    <div class="setting-select-wrap">
+      <label>Time Format:</label>
+      <select id="time-format-setting" onchange="changeGlobalTimeFormat()">
+        <option value="12">12 Hour</option>
+        <option value="24">24 Hour</option>
+      </select>
+    </div>
+    <span id="live-utc"></span>
+  </div>
+</header>
+
+<div class="section-header">
+  <span class="section-title">Analog Clocks (Drag to Sort)</span>
+</div>
+<div class="clocks-row" id="clocks-row">
+  <div class="add-clock-card" id="add-clock-btn" onclick="openModal('clock')">
+    <span>+</span>
+    <span>Add timezone</span>
+  </div>
+</div>
+
+<div class="section-header">
+  <span class="section-title">⏰ Timezone Alarms</span>
+</div>
+<div class="alarm-section">
+  <div class="alarm-form-row">
+    <div class="alarm-field">
+      <label>Time</label>
+      <input type="time" id="alarm-time-input" required>
+    </div>
+    <div class="alarm-field">
+      <label>Anchor Timezone</label>
+      <select id="alarm-tz-select"></select>
+    </div>
+    <div class="alarm-field">
+      <label>Ringtone Sound</label>
+      <select id="alarm-tone-select">
+        <option value="classic">Classic Beeps</option>
+        <option value="chime">Chime Alert</option>
+        <option value="pulse">Digital Pulse</option>
+        <option value="echo">Rising Echo</option>
+        <option value="melody">Melody Loop</option>
+      </select>
+    </div>
+    <div class="alarm-field">
+      <label>Label (Optional)</label>
+      <input type="text" id="alarm-label-input" placeholder="e.g. Sync Sync Call">
+    </div>
+    <button class="btn-add-alarm" onclick="addNewAlarm()">Add Alarm</button>
+  </div>
+  <div class="alarms-list" id="alarms-list"></div>
+</div>
+
+<div class="section-header" style="margin-top:8px">
+  <span class="section-title">Time Table</span>
+  <button class="add-col-btn" id="add-col-btn" onclick="openModal('col')">+ Add column</button>
+</div>
+<div class="table-wrap">
+  <table id="time-table">
+    <thead id="table-head"></thead>
+    <tbody id="table-body"></tbody>
+  </table>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h2 id="modal-title">Add Timezone</h2>
+    <label>Search timezone or country</label>
+    <div class="search-wrap">
+      <input type="text" id="tz-search" placeholder="e.g. London, UTC+8, Japan, Sydney..." autocomplete="off">
+    </div>
+    <div class="selected-tz-display" id="selected-tz-display"></div>
+    <div class="tz-list" id="tz-list"></div>
+    <label>Display label (optional)</label>
+    <input type="text" id="tz-label" placeholder="e.g. London Office" maxlength="24">
+    <div class="modal-btns">
+      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="confirmModal()">Add</button>
+    </div>
+  </div>
+</div>
+
+<div class="alarm-overlay" id="alarm-trigger-overlay">
+  <div class="alarm-alert-card">
+    <div class="alarm-alert-title">⏰ ALARM RINGING</div>
+    <div class="alarm-alert-desc" id="alarm-trigger-text">Your scheduled alarm is going off!</div>
+    <button class="btn-dismiss-alarm" onclick="stopActiveRinging()">Dismiss Alarm</button>
+  </div>
+</div>
+
+<div class="toast-notif" id="toast-popup">
+  <div class="toast-msg">✅ Changes saved</div>
+  <button class="toast-close" onclick="hideToast()" title="Dismiss">✕</button>
+</div>
+
+<script>
+const ALL_TZ = [
+  {tz:'UTC',label:'UTC / Universal Time',abbr:'UTC',offset:'+0:00',countries:'Worldwide standard — used in aviation, science, internet'},
+  {tz:'Etc/GMT+12',label:'UTC−12:00',abbr:'IDLW',offset:'-12:00',countries:'Baker Island, Howland Island (uninhabited US territories)'},
+  {tz:'Pacific/Pago_Pago',label:'UTC−11:00 — Samoa Standard',abbr:'SST',offset:'-11:00',countries:'American Samoa, Niue'},
+  {tz:'Pacific/Honolulu',label:'UTC−10:00 — Hawaii',abbr:'HST',offset:'-10:00',countries:'Hawaii (USA), Cook Islands, French Polynesia (Tahiti)'},
+  {tz:'America/Anchorage',label:'UTC−9:00 — Alaska',abbr:'AKST',offset:'-9:00',countries:'Alaska (USA)'},
+  {tz:'America/Los_Angeles',label:'UTC−8:00 — Pacific Time',abbr:'PST',offset:'-8:00',countries:'California, Washington, Oregon, Nevada (USA); British Columbia (Canada)'},
+  {tz:'America/Denver',label:'UTC−7:00 — Mountain Time',abbr:'MST',offset:'-7:00',countries:'Colorado, Utah, Arizona, New Mexico (USA); Alberta (Canada)'},
+  {tz:'America/Phoenix',label:'UTC−7:00 — Arizona (no DST)',abbr:'MST',offset:'-7:00',countries:'Arizona (USA) — does not observe DST'},
+  {tz:'America/Chicago',label:'UTC−6:00 — Central Time',abbr:'CST',offset:'-6:00',countries:'Texas, Illinois, Minnesota (USA); Manitoba (Canada); Mexico City'},
+  {tz:'America/Mexico_City',label:'UTC−6:00 — Mexico Central',abbr:'CST',offset:'-6:00',countries:'Mexico City, Guadalajara, Monterrey (Mexico)'},
+  {tz:'America/Guatemala',label:'UTC−6:00 — Central America',abbr:'CST',offset:'-6:00',countries:'Guatemala, El Salvador, Honduras, Nicaragua, Costa Rica'},
+  {tz:'America/New_York',label:'UTC−5:00 — Eastern Time',abbr:'EST',offset:'-5:00',countries:'New York, Florida, Georgia (USA); Ontario, Quebec (Canada)'},
+  {tz:'America/Toronto',label:'UTC−5:00 — Toronto',abbr:'EST',offset:'-5:00',countries:'Toronto, Ottawa (Canada)'},
+  {tz:'America/Havana',label:'UTC−5:00 — Cuba',abbr:'CST',offset:'-5:00',countries:'Cuba'},
+  {tz:'America/Bogota',label:'UTC−5:00 — Colombia',abbr:'COT',offset:'-5:00',countries:'Colombia, Ecuador, Peru'},
+  {tz:'America/Lima',label:'UTC−5:00 — Peru',abbr:'PET',offset:'-5:00',countries:'Peru'},
+  {tz:'America/Caracas',label:'UTC−4:00 — Venezuela',abbr:'VET',offset:'-4:00',countries:'Venezuela'},
+  {tz:'America/Halifax',label:'UTC−4:00 — Atlantic Canada',abbr:'AST',offset:'-4:00',countries:'Nova Scotia, New Brunswick, PEI (Canada); Barbados; Bermuda'},
+  {tz:'America/La_Paz',label:'UTC−4:00 — Bolivia',abbr:'BOT',offset:'-4:00',countries:'Bolivia'},
+  {tz:'America/Santiago',label:'UTC−4:00 — Chile',abbr:'CLT',offset:'-4:00',countries:'Chile'},
+  {tz:'America/Sao_Paulo',label:'UTC−3:00 — Brazil',abbr:'BRT',offset:'-3:00',countries:'São Paulo, Rio de Janeiro, Brasília (Brazil)'},
+  {tz:'America/Argentina/Buenos_Aires',label:'UTC−3:00 — Argentina',abbr:'ART',offset:'-3:00',countries:'Argentina, Uruguay'},
+  {tz:'America/Montevideo',label:'UTC−3:00 — Uruguay',abbr:'UYT',offset:'-3:00',countries:'Uruguay'},
+  {tz:'America/St_Johns',label:'UTC−3:30 — Newfoundland',abbr:'NST',offset:'-3:30',countries:'Newfoundland and Labrador (Canada)'},
+  {tz:'America/Noronha',label:'UTC−2:00 — Fernando de Noronha',abbr:'FNT',offset:'-2:00',countries:'Fernando de Noronha (Brazil)'},
+  {tz:'Atlantic/Azores',label:'UTC−1:00 — Azores',abbr:'AZOT',offset:'-1:00',countries:'Azores (Portugal)'},
+  {tz:'Atlantic/Cape_Verde',label:'UTC−1:00 — Cape Verde',abbr:'CVT',offset:'-1:00',countries:'Cape Verde'},
+  {tz:'Europe/London',label:'UTC±0:00 — United Kingdom',abbr:'GMT',offset:'+0:00',countries:'United Kingdom, Ireland, Portugal, Iceland'},
+  {tz:'Africa/Abidjan',label:'UTC±0:00 — West Africa (no DST)',abbr:'GMT',offset:'+0:00',countries:'Ghana, Ivory Coast, Senegal, Guinea, Mali, Mauritania'},
+  {tz:'Europe/Lisbon',label:'UTC±0:00 — Portugal',abbr:'WET',offset:'+0:00',countries:'Portugal (mainland)'},
+  {tz:'Europe/Paris',label:'UTC+1:00 — Central European',abbr:'CET',offset:'+1:00',countries:'France, Belgium, Netherlands, Germany, Austria, Switzerland, Italy, Spain, Poland, Czech Republic, Hungary, Croatia, Albania, Norway, Sweden, Denmark'},
+  {tz:'Europe/Berlin',label:'UTC+1:00 — Germany',abbr:'CET',offset:'+1:00',countries:'Germany, Austria, Switzerland'},
+  {tz:'Europe/Amsterdam',label:'UTC+1:00 — Netherlands',abbr:'CET',offset:'+1:00',countries:'Netherlands, Belgium'},
+  {tz:'Europe/Rome',label:'UTC+1:00 — Italy',abbr:'CET',offset:'+1:00',countries:'Italy, Vatican City, San Marino'},
+  {tz:'Europe/Madrid',label:'UTC+1:00 — Spain',abbr:'CET',offset:'+1:00',countries:'Spain (mainland), Gibraltar'},
+  {tz:'Europe/Warsaw',label:'UTC+1:00 — Poland',abbr:'CET',offset:'+1:00',countries:'Poland'},
+  {tz:'Africa/Lagos',label:'UTC+1:00 — West Africa',abbr:'WAT',offset:'+1:00',countries:'Nigeria, Niger, Chad, Cameroon, Congo, Gabon, Angola, Benin, Togo'},
+  {tz:'Africa/Algiers',label:'UTC+1:00 — Algeria',abbr:'CET',offset:'+1:00',countries:'Algeria, Tunisia'},
+  {tz:'Europe/Athens',label:'UTC+2:00 — Eastern European',abbr:'EET',offset:'+2:00',countries:'Greece, Romania, Bulgaria, Estonia, Latvia, Lithuania, Finland, Ukraine'},
+  {tz:'Europe/Bucharest',label:'UTC+2:00 — Romania',abbr:'EET',offset:'+2:00',countries:'Romania, Moldova'},
+  {tz:'Europe/Helsinki',label:'UTC+2:00 — Finland',abbr:'EET',offset:'+2:00',countries:'Finland, Estonia'},
+  {tz:'Europe/Kyiv',label:'UTC+2:00 — Ukraine',abbr:'EET',offset:'+2:00',countries:'Ukraine'},
+  {tz:'Africa/Cairo',label:'UTC+2:00 — Egypt',abbr:'EET',offset:'+2:00',countries:'Egypt, Libya'},
+  {tz:'Africa/Johannesburg',label:'UTC+2:00 — South Africa',abbr:'SAST',offset:'+2:00',countries:'South Africa, Zimbabwe, Botswana, Namibia, Lesotho, Swaziland'},
+  {tz:'Africa/Harare',label:'UTC+2:00 — Zimbabwe',abbr:'CAT',offset:'+2:00',countries:'Zimbabwe, Zambia, Malawi, Mozambique, DR Congo (east)'},
+  {tz:'Asia/Jerusalem',label:'UTC+2:00 — Israel',abbr:'IST',offset:'+2:00',countries:'Israel, Palestine'},
+  {tz:'Asia/Beirut',label:'UTC+2:00 — Lebanon',abbr:'EET',offset:'+2:00',countries:'Lebanon, Cyprus'},
+  {tz:'Europe/Moscow',label:'UTC+3:00 — Moscow',abbr:'MSK',offset:'+3:00',countries:'Russia (Moscow, St. Petersburg, western regions)'},
+  {tz:'Africa/Nairobi',label:'UTC+3:00 — East Africa',abbr:'EAT',offset:'+3:00',countries:'Kenya, Ethiopia, Tanzania, Uganda, Somalia, Eritrea, Djibouti, Madagascar'},
+  {tz:'Asia/Riyadh',label:'UTC+3:00 — Saudi Arabia',abbr:'AST',offset:'+3:00',countries:'Saudi Arabia, Yemen, Kuwait, Bahrain, Qatar, Iraq'},
+  {tz:'Asia/Baghdad',label:'UTC+3:00 — Iraq',abbr:'AST',offset:'+3:00',countries:'Iraq'},
+  {tz:'Asia/Kuwait',label:'UTC+3:00 — Kuwait',abbr:'AST',offset:'+3:00',countries:'Kuwait'},
+  {tz:'Asia/Tehran',label:'UTC+3:30 — Iran',abbr:'IRST',offset:'+3:30',countries:'Iran'},
+  {tz:'Asia/Dubai',label:'UTC+4:00 — Gulf',abbr:'GST',offset:'+4:00',countries:'UAE (Dubai, Abu Dhabi), Oman, Reunion, Mauritius, Seychelles'},
+  {tz:'Asia/Baku',label:'UTC+4:00 — Azerbaijan',abbr:'AZT',offset:'+4:00',countries:'Azerbaijan'},
+  {tz:'Asia/Tbilisi',label:'UTC+4:00 — Georgia',abbr:'GET',offset:'+4:00',countries:'Georgia'},
+  {tz:'Asia/Yerevan',label:'UTC+4:00 — Armenia',abbr:'AMT',offset:'+4:00',countries:'Armenia'},
+  {tz:'Europe/Samara',label:'UTC+4:00 — Samara (Russia)',abbr:'SAMT',offset:'+4:00',countries:'Samara, Udmurtia (Russia)'},
+  {tz:'Asia/Kabul',label:'UTC+4:30 — Afghanistan',abbr:'AFT',offset:'+4:30',countries:'Afghanistan'},
+  {tz:'Asia/Karachi',label:'UTC+5:00 — Pakistan',abbr:'PKT',offset:'+5:00',countries:'Pakistan'},
+  {tz:'Asia/Tashkent',label:'UTC+5:00 — Uzbekistan',abbr:'UZT',offset:'+5:00',countries:'Uzbekistan, Turkmenistan, Tajikistan'},
+  {tz:'Asia/Yekaterinburg',label:'UTC+5:00 — Yekaterinburg',abbr:'YEKT',offset:'+5:00',countries:'Yekaterinburg region (Russia)'},
+  {tz:'Asia/Kolkata',label:'UTC+5:30 — India',abbr:'IST',offset:'+5:30',countries:'India — entire country uses a single timezone'},
+  {tz:'Asia/Colombo',label:'UTC+5:30 — Sri Lanka',abbr:'SLST',offset:'+5:30',countries:'Sri Lanka'},
+  {tz:'Asia/Kathmandu',label:'UTC+5:45 — Nepal',abbr:'NPT',offset:'+5:45',countries:'Nepal'},
+  {tz:'Asia/Dhaka',label:'UTC+6:00 — Bangladesh',abbr:'BST',offset:'+6:00',countries:'Bangladesh'},
+  {tz:'Asia/Almaty',label:'UTC+6:00 — Kazakhstan (east)',abbr:'ALMT',offset:'+6:00',countries:'Kazakhstan (Almaty), Kyrgyzstan'},
+  {tz:'Asia/Omsk',label:'UTC+6:00 — Omsk (Russia)',abbr:'OMST',offset:'+6:00',countries:'Omsk (Russia)'},
+  {tz:'Indian/Chagos',label:'UTC+6:00 — Chagos',abbr:'IOT',offset:'+6:00',countries:'British Indian Ocean Territory'},
+  {tz:'Asia/Rangoon',label:'UTC+6:30 — Myanmar',abbr:'MMT',offset:'+6:30',countries:'Myanmar (Burma)'},
+  {tz:'Indian/Cocos',label:'UTC+6:30 — Cocos Islands',abbr:'CCT',offset:'+6:30',countries:'Cocos (Keeling) Islands (Australia)'},
+  {tz:'Asia/Bangkok',label:'UTC+7:00 — Indochina',abbr:'ICT',offset:'+7:00',countries:'Thailand, Vietnam, Cambodia, Laos'},
+  {tz:'Asia/Jakarta',label:'UTC+7:00 — Western Indonesia',abbr:'WIB',offset:'+7:00',countries:'Java, Sumatra, Bali — Indonesia'},
+  {tz:'Asia/Ho_Chi_Minh',label:'UTC+7:00 — Vietnam',abbr:'ICT',offset:'+7:00',countries:'Vietnam'},
+  {tz:'Asia/Krasnoyarsk',label:'UTC+7:00 — Krasnoyarsk',abbr:'KRAT',offset:'+7:00',countries:'Krasnoyarsk region (Russia)'},
+  {tz:'Asia/Shanghai',label:'UTC+8:00 — China',abbr:'CST',offset:'+8:00',countries:'China (entire country uses one timezone)'},
+  {tz:'Asia/Singapore',label:'UTC+8:00 — Singapore',abbr:'SGT',offset:'+8:00',countries:'Singapore'},
+  {tz:'Asia/Hong_Kong',label:'UTC+8:00 — Hong Kong',abbr:'HKT',offset:'+8:00',countries:'Hong Kong, Macau'},
+  {tz:'Asia/Taipei',label:'UTC+8:00 — Taiwan',abbr:'CST',offset:'+8:00',countries:'Taiwan'},
+  {tz:'Asia/Kuala_Lumpur',label:'UTC+8:00 — Malaysia',abbr:'MYT',offset:'+8:00',countries:'Malaysia'},
+  {tz:'Asia/Makassar',label:'UTC+8:00 — Central Indonesia',abbr:'WITA',offset:'+8:00',countries:'Sulawesi, Bali (officially), Lombok — Indonesia'},
+  {tz:'Asia/Manila',label:'UTC+8:00 — Philippines',abbr:'PHT',offset:'+8:00',countries:'Philippines'},
+  {tz:'Asia/Brunei',label:'UTC+8:00 — Brunei',abbr:'BNT',offset:'+8:00',countries:'Brunei'},
+  {tz:'Australia/Perth',label:'UTC+8:00 — Western Australia',abbr:'AWST',offset:'+8:00',countries:'Western Australia'},
+  {tz:'Asia/Irkutsk',label:'UTC+8:00 — Irkutsk',abbr:'IRKT',offset:'+8:00',countries:'Irkutsk region (Russia)'},
+  {tz:'Asia/Ulaanbaatar',label:'UTC+8:00 — Mongolia',abbr:'ULAT',offset:'+8:00',countries:'Mongolia'},
+  {tz:'Asia/Seoul',label:'UTC+9:00 — Korea',abbr:'KST',offset:'+9:00',countries:'South Korea, North Korea'},
+  {tz:'Asia/Tokyo',label:'UTC+9:00 — Japan',abbr:'JST',offset:'+9:00',countries:'Japan'},
+  {tz:'Asia/Jayapura',label:'UTC+9:00 — Eastern Indonesia',abbr:'WIT',offset:'+9:00',countries:'Papua, Maluku — Indonesia'},
+  {tz:'Pacific/Palau',label:'UTC+9:00 — Palau',abbr:'PWT',offset:'+9:00',countries:'Palau'},
+  {tz:'Asia/Yakutsk',label:'UTC+9:00 — Yakutsk',abbr:'YAKT',offset:'+9:00',countries:'Yakutsk, Sakha Republic (Russia)'},
+  {tz:'Australia/Darwin',label:'UTC+9:30 — Northern Territory',abbr:'ACST',offset:'+9:30',countries:'Northern Territory (Australia)'},
+  {tz:'Australia/Adelaide',label:'UTC+9:30 — South Australia',abbr:'ACST',offset:'+9:30',countries:'South Australia'},
+  {tz:'Australia/Sydney',label:'UTC+10:00 — Eastern Australia',abbr:'AEST',offset:'+10:00',countries:'New South Wales, Victoria, Tasmania, Queensland (Australia)'},
+  {tz:'Australia/Melbourne',label:'UTC+10:00 — Melbourne',abbr:'AEST',offset:'+10:00',countries:'Victoria (Australia)'},
+  {tz:'Australia/Brisbane',label:'UTC+10:00 — Queensland',abbr:'AEST',offset:'+10:00',countries:'Queensland (Australia) — no DST'},
+  {tz:'Pacific/Guam',label:'UTC+10:00 — Guam',abbr:'ChST',offset:'+10:00',countries:'Guam, Northern Mariana Islands (USA)'},
+  {tz:'Pacific/Port_Moresby',label:'UTC+10:00 — Papua New Guinea',abbr:'PGT',offset:'+10:00',countries:'Papua New Guinea'},
+  {tz:'Asia/Vladivostok',label:'UTC+10:00 — Vladivostok',abbr:'VLAT',offset:'+10:00',countries:'Vladivostok, Primorsky Krai (Russia)'},
+  {tz:'Australia/Lord_Howe',label:'UTC+10:30 — Lord Howe Island',abbr:'LHST',offset:'+10:30',countries:'Lord Howe Island (Australia)'},
+  {tz:'Pacific/Noumea',label:'UTC+11:00 — New Caledonia',abbr:'NCT',offset:'+11:00',countries:'New Caledonia (France), Vanuatu, Solomon Islands'},
+  {tz:'Pacific/Guadalcanal',label:'UTC+11:00 — Solomon Islands',abbr:'SBT',offset:'+11:00',countries:'Solomon Islands'},
+  {tz:'Asia/Magadan',label:'UTC+11:00 — Magadan',abbr:'MAGT',offset:'+11:00',countries:'Magadan region (Russia)'},
+  {tz:'Pacific/Norfolk',label:'UTC+11:00 — Norfolk Island',abbr:'NFT',offset:'+11:00',countries:'Norfolk Island (Australia)'},
+  {tz:'Pacific/Auckland',label:'UTC+12:00 — New Zealand',abbr:'NZST',offset:'+12:00',countries:'New Zealand (main islands)'},
+  {tz:'Pacific/Fiji',label:'UTC+12:00 — Fiji',abbr:'FJT',offset:'+12:00',countries:'Fiji'},
+  {tz:'Pacific/Majuro',label:'UTC+12:00 — Marshall Islands',abbr:'MHT',offset:'+12:00',countries:'Marshall Islands'},
+  {tz:'Asia/Kamchatka',label:'UTC+12:00 — Kamchatka',abbr:'PETT',offset:'+12:00',countries:'Kamchatka, Chukotka (Russia)'},
+  {tz:'Pacific/Tongatapu',label:'UTC+13:00 — Tonga',abbr:'TOT',offset:'+13:00',countries:'Tonga'},
+  {tz:'Pacific/Apia',label:'UTC+13:00 — Samoa',abbr:'WST',offset:'+13:00',countries:'Samoa (Western)'},
+  {tz:'Pacific/Kiritimati',label:'UTC+14:00 — Line Islands',abbr:'LINT',offset:'+14:00',countries:'Kiribati (Line Islands) — world\'s most ahead timezone'},
+];
+
+const TZ_MAP = {};
+ALL_TZ.forEach(t => { TZ_MAP[t.tz] = t; });
+
+function getFlag(tz) {
+  const flags = {
+    'Asia/Manila':'🇵🇭','Australia/Sydney':'🇦🇺','Australia/Melbourne':'🇦🇺','Australia/Brisbane':'🇦🇺',
+    'Australia/Perth':'🇦🇺','Australia/Darwin':'🇦🇺','Australia/Adelaide':'🇦🇺','Australia/Lord_Howe':'🇦🇺',
+    'Asia/Tokyo':'🇯🇵','Asia/Singapore':'🇸🇬','Asia/Hong_Kong':'🇭🇰','Asia/Seoul':'🇰🇷',
+    'Asia/Shanghai':'🇨🇳','Asia/Taipei':'🇹🇼','Asia/Kolkata':'🇮🇳','Asia/Colombo':'🇱🇰',
+    'Asia/Dubai':'🇦🇪','Asia/Bangkok':'🇹🇭','Asia/Jakarta':'🇮🇩','Asia/Ho_Chi_Minh':'🇻🇳',
+    'Asia/Kuala_Lumpur':'🇲🇾','Asia/Karachi':'🇵🇰','Asia/Dhaka':'🇧🇩','Asia/Kolkata':'🇮🇳',
+    'Asia/Kathmandu':'🇳🇵','Asia/Kabul':'🇦🇫','Asia/Tehran':'🇮🇷','Asia/Baghdad':'🇮🇶',
+    'Asia/Riyadh':'🇸🇦','Asia/Kuwait':'🇰🇼','Asia/Beirut':'🇱🇧','Asia/Jerusalem':'🇮🇱',
+    'Asia/Baku':'🇦🇿','Asia/Tbilisi':'🇬🇪','Asia/Yerevan':'🇦🇲','Asia/Tashkent':'🇺🇿',
+    'Asia/Brunei':'🇧🇳','Asia/Jayapura':'🇮🇩','Asia/Makassar':'🇮🇩','Asia/Rangoon':'🇲🇲',
+    'Asia/Ulaanbaatar':'🇲🇳',
+    'Pacific/Auckland':'🇳🇿','Pacific/Honolulu':'🇺🇸','Pacific/Guam':'🇬🇺',
+    'Pacific/Fiji':'🇫🇯','Pacific/Apia':'🇼🇸','Pacific/Tongatapu':'🇹🇴',
+    'Pacific/Port_Moresby':'🇵🇬','Pacific/Guadalcanal':'🇸🇧','Pacific/Noumea':'🇳🇨',
+    'Pacific/Palau':'🇵🇼','Pacific/Majuro':'🇲🇭',
+    'Europe/London':'🇬🇧','Europe/Paris':'🇫🇷','Europe/Berlin':'🇩🇪','Europe/Amsterdam':'🇳🇱',
+    'Europe/Madrid':'🇪🇸','Europe/Rome':'🇮🇹','Europe/Moscow':'🇷🇺','Europe/Kyiv':'🇺🇦',
+    'Europe/Athens':'🇬🇷','Europe/Warsaw':'🇵🇱','Europe/Bucharest':'🇷🇴','Europe/Helsinki':'🇫🇮',
+    'Europe/Lisbon':'🇵🇹','Europe/Samara':'🇷🇺',
+    'Africa/Nairobi':'🇰🇪','Africa/Lagos':'🇳🇬','Africa/Cairo':'🇪🇬','Africa/Johannesburg':'🇿🇦',
+    'Africa/Harare':'🇿🇼','Africa/Abidjan':'🇨🇮','Africa/Algiers':'🇩🇿',
+    'America/New_York':'🇺🇸','America/Chicago':'🇺🇸','America/Denver':'🇺🇸','America/Los_Angeles':'🇺🇸',
+    'America/Anchorage':'🇺🇸','America/Phoenix':'🇺🇸','America/Noronha':'🇧🇷',
+    'America/Toronto':'🇨🇦','America/Vancouver':'🇨🇦','America/Halifax':'🇨🇦','America/St_Johns':'🇨🇦',
+    'America/Sao_Paulo':'🇧🇷','America/Mexico_City':'🇲🇽','America/Argentina/Buenos_Aires':'🇦🇷',
+    'America/Bogota':'🇨🇴','America/Lima':'🇵🇪','America/Santiago':'🇨🇱','America/Caracas':'🇻🇪',
+    'America/Havana':'🇨🇺','America/La_Paz':'🇧🇴','America/Montevideo':'🇺🇾','America/Guatemala':'🇬🇹',
+    'Atlantic/Azores':'🇵🇹','Atlantic/Cape_Verde':'🇨🇻',
+    'Indian/Chagos':'🇮🇴','Indian/Cocos':'🇨🇨',
+    'UTC':'🌐',
+  };
+  return flags[tz] || '🌐';
+}
+
+function getLiveOffset(tz) {
+  const now = new Date();
+  const tzDate = new Date(now.toLocaleString('en-US',{timeZone:tz}));
+  const utcDate = new Date(now.toLocaleString('en-US',{timeZone:'UTC'}));
+  const diff = (tzDate - utcDate) / 3600000;
+  const sign = diff >= 0 ? '+' : '-';
+  const h = Math.floor(Math.abs(diff));
+  const m = Math.round((Math.abs(diff) - h) * 60);
+  return `UTC${sign}${h}${m ? ':'+String(m).padStart(2,'0'):''}`;
+}
+
+function getDstStatus(tz) {
+  try {
+    const now = new Date();
+    const d1 = new Date(now.getFullYear(), 0, 1);
+    const d2 = new Date(now.getFullYear(), 6, 1);
+    const o1 = new Date(d1.toLocaleString('en-US', { timeZone: tz })).getTimezoneOffset();
+    const o2 = new Date(d2.toLocaleString('en-US', { timeZone: tz })).getTimezoneOffset();
+    const currentOffset = new Date(now.toLocaleString('en-US', { timeZone: tz })).getTimezoneOffset();
+    
+    if (o1 === o2) return { isDst: false, label: 'STD' };
+    const stdOffset = Math.max(o1, o2);
+    return currentOffset < stdOffset ? { isDst: true, label: 'DST' } : { isDst: false, label: 'STD' };
+  } catch(e) {
+    return { isDst: false, label: 'STD' };
+  }
+}
+
+const fallbackClocks = [
+  {tz:'Asia/Manila',label:'Philippines',isPrimary:true},
+  {tz:'Europe/London',label:'UK'},
+];
+const fallbackTableCols = [
+  {tz:'America/New_York',label:'New York'},
+  {tz:'Australia/Sydney',label:'Australia'},
+];
+
+let clocks = JSON.parse(localStorage.getItem('saved_world_clocks')) || [...fallbackClocks];
+let tableCols = JSON.parse(localStorage.getItem('saved_world_table_cols')) || [...fallbackTableCols];
+let alarms = JSON.parse(localStorage.getItem('saved_world_alarms')) || [];
+
+let globalTimeFormat = localStorage.getItem('saved_time_format') || '12';
+let clockStyleView = localStorage.getItem('saved_clock_style') || 'both';
+
+let modalMode = 'clock';
+let selectedTz = null;
+let toastTimeout = null;
+let audioCtx = null;
+let alarmOscillator = null;
+let alarmInterval = null;
+let isAlarmRinging = false;
+const MAX_COLS = 4;
+
+function checkUnsavedChanges() {
+  const savedClocks = localStorage.getItem('saved_world_clocks');
+  const savedCols = localStorage.getItem('saved_world_table_cols');
+  const savedAlarms = localStorage.getItem('saved_world_alarms');
+  const savedFormat = localStorage.getItem('saved_time_format') || '12';
+  const savedStyle = localStorage.getItem('saved_clock_style') || 'both';
+  
+  const hasChanges = (JSON.stringify(clocks) !== (savedClocks || JSON.stringify(fallbackClocks))) ||
+                     (JSON.stringify(tableCols) !== (savedCols || JSON.stringify(fallbackTableCols))) ||
+                     (JSON.stringify(alarms) !== (savedAlarms || JSON.stringify([]))) ||
+                     (globalTimeFormat !== savedFormat) ||
+                     (clockStyleView !== savedStyle);
+                     
+  document.getElementById('save-banner').style.display = hasChanges ? 'inline-flex' : 'none';
+}
+
+function saveActiveConfig() {
+  localStorage.setItem('saved_world_clocks', JSON.stringify(clocks));
+  localStorage.setItem('saved_world_table_cols', JSON.stringify(tableCols));
+  localStorage.setItem('saved_world_alarms', JSON.stringify(alarms));
+  localStorage.setItem('saved_time_format', globalTimeFormat);
+  localStorage.setItem('saved_clock_style', clockStyleView);
+  checkUnsavedChanges();
+  showToast();
+}
+
+function changeGlobalTimeFormat() {
+  globalTimeFormat = document.getElementById('time-format-setting').value;
+  renderClocks();
+  renderTable();
+}
+
+function changeClockStyleView() {
+  clockStyleView = document.getElementById('clock-style-setting').value;
+  renderClocks();
+}
+
+function showToast() {
+  const toast = document.getElementById('toast-popup');
+  clearTimeout(toastTimeout);
+  toast.classList.add('show');
+  toastTimeout = setTimeout(() => hideToast(), 4000);
+}
+
+function hideToast() {
+  document.getElementById('toast-popup').classList.remove('show');
+}
+
+function populateAlarmTimezoneDropdown() {
+  const select = document.getElementById('alarm-tz-select');
+  select.innerHTML = '';
+  clocks.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.tz;
+    opt.textContent = `${getFlag(c.tz)} ${c.label || c.tz}`;
+    select.appendChild(opt);
+  });
+}
+
+function addNewAlarm() {
+  const timeInput = document.getElementById('alarm-time-input').value;
+  const tzInput = document.getElementById('alarm-tz-select').value;
+  const toneInput = document.getElementById('alarm-tone-select').value;
+  const labelInput = document.getElementById('alarm-label-input').value.trim();
+  
+  if (!timeInput) return;
+  
+  alarms.push({
+    id: Date.now(),
+    time: timeInput,
+    tz: tzInput,
+    tone: toneInput,
+    label: labelInput || 'Alarm'
+  });
+  
+  document.getElementById('alarm-label-input').value = '';
+  renderAlarmsList();
+  checkUnsavedChanges();
+}
+
+function deleteAlarm(id) {
+  alarms = alarms.filter(a => a.id !== id);
+  renderAlarmsList();
+  checkUnsavedChanges();
+}
+
+function renderAlarmsList() {
+  const container = document.getElementById('alarms-list');
+  container.innerHTML = '';
+  if (alarms.length === 0) {
+    container.innerHTML = '<div style="font-size:11px; color:var(--muted)">No scheduled alarms configured</div>';
+    return;
+  }
+  alarms.forEach(a => {
+    const card = document.createElement('div');
+    card.className = 'alarm-item-card';
+    
+    let displayTime = a.time;
+    if (globalTimeFormat === '12') {
+      const parts = a.time.split(':');
+      let h = parseInt(parts[0], 10);
+      const m = parts[1];
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      h = h % 12 || 12;
+      displayTime = `${String(h).padStart(2,'0')}:${m} ${ampm}`;
+    }
+
+    card.innerHTML = `
+      <div class="alarm-item-info">
+        <span class="alarm-item-time">${displayTime}</span>
+        <span class="alarm-item-label">
+          <span>${getFlag(a.tz)} ${a.label} (${TZ_MAP[a.tz]?.abbr || a.tz})</span>
+          <span style="color:var(--accent); font-size:8px; opacity:0.7">🎵 ${a.tone}</span>
+        </span>
+      </div>
+      <button class="alarm-item-delete" onclick="deleteAlarm(${a.id})" title="Delete alarm">✕</button>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function checkAlarms() {
+  if (isAlarmRinging) return;
+  
+  alarms.forEach(alarm => {
+    const tzDate = getTimeInTz(alarm.tz);
+    const currentHours = String(tzDate.getHours()).padStart(2, '0');
+    const currentMinutes = String(tzDate.getMinutes()).padStart(2, '0');
+    const currentSeconds = tzDate.getSeconds();
+    const formattedCurrentTime = `${currentHours}:${currentMinutes}`;
+    
+    if (alarm.time === formattedCurrentTime && currentSeconds < 2) {
+      triggerAlarmRinging(alarm);
+    }
+  });
+}
+
+function triggerAlarmRinging(alarm) {
+  isAlarmRinging = true;
+  document.getElementById('alarm-trigger-text').textContent = `[${alarm.label}] matches your configured ${getFlag(alarm.tz)} ${TZ_MAP[alarm.tz]?.abbr || alarm.tz} profile timeline rules.`;
+  document.getElementById('alarm-trigger-overlay').classList.add('open');
+  
+  playSynthesizedTone(alarm.tone);
+}
+
+function playSynthesizedTone(type) {
+  try {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    
+    let step = 0;
+    alarmInterval = setInterval(() => {
+      if (!isAlarmRinging) return;
+      
+      const osc = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      osc.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      
+      if (type === 'classic') {
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        osc.start();
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+        osc.stop(audioCtx.currentTime + 0.15);
+      } 
+      else if (type === 'chime') {
+        const freq = step % 2 === 0 ? 1200 : 1500;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        osc.start();
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+        osc.stop(audioCtx.currentTime + 0.4);
+      } 
+      else if (type === 'pulse') {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        osc.start();
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+        osc.stop(audioCtx.currentTime + 0.08);
+      } 
+      else if (type === 'echo') {
+        const rampFreq = 400 + (step % 6) * 150;
+        osc.frequency.setValueAtTime(rampFreq, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.25, audioCtx.currentTime);
+        osc.start();
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+        osc.stop(audioCtx.currentTime + 0.25);
+      } 
+      else if (type === 'melody') {
+        const notes = [523.25, 587.33, 659.25, 783.99]; 
+        osc.frequency.setValueAtTime(notes[step % notes.length], audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        osc.start();
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        osc.stop(audioCtx.currentTime + 0.3);
+      }
+      
+      step++;
+    }, type === 'pulse' ? 150 : 300);
+
+  } catch(e) {
+    console.log("Audio Context waiting for explicit client permissions standard rules framework.");
+  }
+}
+
+function stopActiveRinging() {
+  isAlarmRinging = false;
+  document.getElementById('alarm-trigger-overlay').classList.remove('open');
+  if (alarmInterval) {
+    clearInterval(alarmInterval);
+    alarmInterval = null;
+  }
+}
+
+function getTimeInTz(tz) {
+  return new Date(new Date().toLocaleString('en-US',{timeZone:tz}));
+}
+
+function formatDisplayString(date) {
+  let h = date.getHours();
+  const m = String(date.getMinutes()).padStart(2, '0');
+  const s = String(date.getSeconds()).padStart(2, '0');
+  
+  if (globalTimeFormat === '24') {
+    return `${String(h).padStart(2, '0')}:${m}:${s}`;
+  } else {
+    const ap = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${String(h).padStart(2, '0')}:${m}:${s} ${ap}`;
+  }
+}
+
+function formatDateShort(date) {
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function formatHour(h) {
+  if (globalTimeFormat === '24') {
+    return `${String(h).padStart(2, '0')}:00`;
+  } else {
+    const ap = h >= 12 ? 'PM' : 'AM'; 
+    const h12 = h % 12 || 12;
+    return `${String(h12).padStart(2, '0')}:00 ${ap}`;
+  }
+}
+
+function convertHourWithDetails(fromTz,toTz,hour) {
+  const now = new Date();
+  const fromDate = new Date(now.toLocaleString('en-US',{timeZone:fromTz}));
+  fromDate.setHours(hour,0,0,0);
+  const toBase = new Date(fromDate.toLocaleString('en-US',{timeZone:toTz}));
+  const fromBase = new Date(fromDate.toLocaleString('en-US',{timeZone:fromTz}));
+  const diff = toBase - fromBase;
+  const toHour = new Date(fromDate.getTime()+diff);
+  
+  const h=toHour.getHours(), m=String(toHour.getMinutes()).padStart(2, '0');
+  let timeStr = "";
+  
+  if (globalTimeFormat === '24') {
+    timeStr = `${String(h).padStart(2, '0')}:${m}`;
+  } else {
+    const ap = h >= 12 ? 'PM' : 'AM'; 
+    const h12 = h % 12 || 12;
+    timeStr = `${String(h12).padStart(2, '0')}:${m} ${ap}`;
+  }
+  
+  return {
+    timeStr: timeStr,
+    dateStr: formatDateShort(toHour)
+  };
+}
+
+function makeClockSVG(tz) {
+  const date=getTimeInTz(tz);
+  const h=date.getHours()%12,m=date.getMinutes(),s=date.getSeconds();
+  const hA=(h*30)+(m*0.5)-90, mA=(m*6)-90, sA=(s*6)-90;
+  const cx=50,cy=50,r=46;
+  const xy=(a,l)=>[cx+l*Math.cos(a*Math.PI/180),cy+l*Math.sin(a*Math.PI/180)];
+  const [hx,hy]=xy(hA,26),[mx,my]=xy(mA,34),[sx,sy]=xy(sA,38);
+  let ticks='';
+  for(let i=0;i<60;i++){
+    const a=i*6-90,ih=i%5===0;
+    const inn=ih?r-8:r-4,out=r-1;
+    const x1=cx+inn*Math.cos(a*Math.PI/180),y1=cy+inn*Math.sin(a*Math.PI/180);
+    const x2=cx+out*Math.cos(a*Math.PI/180),y2=cy+out*Math.sin(a*Math.PI/180);
+    ticks+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${ih?'rgba(255,255,255,0.5)':'rgba(255,255,255,0.15)'}" stroke-width="${ih?1.5:0.8}"/>`;
+  }
+  return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="50" cy="50" r="46" fill="#1a1a20" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+    ${ticks}
+    <line x1="50" y1="50" x2="${hx.toFixed(1)}" y2="${hy.toFixed(1)}" stroke="#f0eff4" stroke-width="3.5" stroke-linecap="round"/>
+    <line x1="50" y1="50" x2="${mx.toFixed(1)}" y2="${my.toFixed(1)}" stroke="#f0eff4" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="50" y1="50" x2="${sx.toFixed(1)}" y2="${sy.toFixed(1)}" stroke="#c8f564" stroke-width="1.5" stroke-linecap="round"/>
+    <circle cx="50" cy="50" r="3" fill="#c8f564"/>
+    <circle cx="50" cy="50" r="1.5" fill="#0d0d0f"/>
+  </svg>`;
+}
+
+function renderClocks() {
+  const row=document.getElementById('clocks-row');
+  const addBtn=document.getElementById('add-clock-btn');
+  row.querySelectorAll('.clock-card').forEach(e=>e.remove());
+  clocks.forEach((c,i)=>{
+    const date=getTimeInTz(c.tz);
+    const card=document.createElement('div');
+    card.className='clock-card'+(c.isPrimary?' primary':'');
+    card.setAttribute('draggable', c.isPrimary ? 'false' : 'true');
+    card.setAttribute('data-index', i);
+    
+    if (!c.isPrimary) {
+      card.addEventListener('dragstart', handleDragStart);
+      card.addEventListener('dragover', handleDragOver);
+      card.addEventListener('drop', handleDrop);
+      card.addEventListener('dragend', handleDragEnd);
+    }
+    
+    const flag=getFlag(c.tz);
+    const dstInfo = getDstStatus(c.tz);
+    
+    const showAnalog = (clockStyleView === 'both' || clockStyleView === 'analog') ? '' : 'display:none;';
+    const showDigital = (clockStyleView === 'both' || clockStyleView === 'digital') ? '' : 'display:none;';
+    
+    card.innerHTML = `
+      ${!c.isPrimary?`<button class="remove-btn" onclick="removeClock(${i}); event.stopPropagation();" title="Remove">✕</button>`:''}
+      <div class="clock-label">${flag} ${c.label||TZ_MAP[c.tz]?.abbr||c.tz}</div>
+      <div class="analog-clock" id="clock-svg-${i}" style="${showAnalog}">${makeClockSVG(c.tz)}</div>
+      <div class="digital-time" id="clock-dig-${i}" style="${showDigital}">${formatDisplayString(date)}</div>
+      <div class="clock-date" id="clock-date-${i}">${formatDateShort(date)}</div>
+      <div class="clock-offset-row">
+        <span>${getLiveOffset(c.tz)}</span>
+        <span class="dst-tag ${dstInfo.isDst?'is-dst':'is-std'}">${dstInfo.label}</span>
+      </div>
+    `;
+    row.insertBefore(card,addBtn);
+  });
+  populateAlarmTimezoneDropdown();
+  checkUnsavedChanges();
+}
+
+let dragSrcIndex = null;
+function handleDragStart(e) {
+  dragSrcIndex = this.getAttribute('data-index');
+  this.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+function handleDragOver(e) {
+  e.preventDefault();
+  return false;
+}
+function handleDrop(e) {
+  e.stopPropagation(); e.preventDefault();
+  const targetIndex = this.getAttribute('data-index');
+  if (targetIndex === "0" || dragSrcIndex === null || dragSrcIndex === targetIndex) return;
+  const draggedItem = clocks.splice(dragSrcIndex, 1)[0];
+  clocks.splice(targetIndex, 0, draggedItem);
+  renderClocks();
+  renderTable();
+}
+function handleDragEnd() {
+  this.classList.remove('dragging');
+  document.querySelectorAll('.clock-card').forEach(card => card.classList.remove('dragging'));
+}
+
+function updateClockFaces() {
+  clocks.forEach((c,i)=>{
+    const sv=document.getElementById(`clock-svg-${i}`);
+    const dg=document.getElementById(`clock-dig-${i}`);
+    const dt=document.getElementById(`clock-date-${i}`);
+    const tzDate = getTimeInTz(c.tz);
+    if(sv && clockStyleView !== 'digital') sv.innerHTML=makeClockSVG(c.tz);
+    if(dg && clockStyleView !== 'analog') dg.textContent=formatDisplayString(tzDate);
+    if(dt) dt.textContent=formatDateShort(tzDate);
+  });
+}
+
+function removeClock(i) {
+  clocks.splice(i,1);
+  renderClocks();
+  renderTable();
+}
+
+function renderTable() {
+  const head=document.getElementById('table-head');
+  const body=document.getElementById('table-body');
+  const btn=document.getElementById('add-col-btn');
+  btn.style.display=tableCols.length>=MAX_COLS?'none':'';
+  const pt=clocks[0].tz;
+  const pl=clocks[0].label||TZ_MAP[pt]?.abbr||pt;
+  const baseDst = getDstStatus(pt);
+  
+  let headHtml=`<tr><th>${getFlag(pt)} ${pl} <span class="dst-tag ${baseDst.isDst?'is-dst':'is-std'}" style="margin-right:4px">${baseDst.label}</span><span class="now-badge">base</span></th>`;
+  tableCols.forEach((col,i)=>{
+    const colDst = getDstStatus(col.tz);
+    headHtml+=`<th>${getFlag(col.tz)} ${col.label||TZ_MAP[col.tz]?.abbr||col.tz} <span class="dst-tag ${colDst.isDst?'is-dst':'is-std'}">${colDst.label}</span><span class="th-remove" onclick="removeCol(${i})">✕</span></th>`;
+  });
+  headHtml+='</tr>';
+  head.innerHTML=headHtml;
+  
+  const baseDateNow = getTimeInTz(pt);
+  const nowH=baseDateNow.getHours();
+  let bodyHtml='';
+  for(let h=0;h<24;h++){
+    const isNow=h===nowH;
+    const targetBaseDate = new Date(baseDateNow.getTime());
+    targetBaseDate.setHours(h,0,0,0);
+    
+    bodyHtml+=`<tr${isNow?' class="highlight"':''}>`;
+    bodyHtml+=`<td class="${isNow?'current-col':''}">${formatHour(h)}<span class="table-date-label">(${formatDateShort(targetBaseDate)})</span>${isNow?'<span class="now-badge">now</span>':''}</td>`;
+    tableCols.forEach(col=>{
+      const converted = convertHourWithDetails(pt,col.tz,h);
+      bodyHtml+=`<td>${converted.timeStr}<span class="table-date-label">(${converted.dateStr})</span></td>`;
+    });
+    bodyHtml+='</tr>';
+  }
+  body.innerHTML=bodyHtml;
+  renderAlarmsList();
+  checkUnsavedChanges();
+}
+
+function removeCol(i) {
+  tableCols.splice(i,1);
+  renderTable();
+}
+
+function buildTzList(filter) {
+  const list=document.getElementById('tz-list');
+  const q=(filter||'').toLowerCase().trim();
+  const filtered=q?ALL_TZ.filter(t=>
+    t.label.toLowerCase().includes(q)||
+    t.abbr.toLowerCase().includes(q)||
+    t.countries.toLowerCase().includes(q)||
+    t.offset.toLowerCase().includes(q)||
+    t.tz.toLowerCase().includes(q)||
+    t.offset.replace(':','').includes(q.replace(':',''))
+  ):ALL_TZ;
+
+  if(!filtered.length){
+    list.innerHTML='<div class="no-results">No timezones found</div>';
+    return;
+  }
+
+  let html='';
+  filtered.forEach(t=>{
+    const isSel=selectedTz===t.tz;
+    const dstInfo = getDstStatus(t.tz);
+    html+=`<div class="tz-item${isSel?' selected':''}" onclick="selectTz('${t.tz}')">
+      <div class="tz-item-left">
+        <div class="tz-item-name">${getFlag(t.tz)} ${t.label}</div>
+        <div class="tz-item-countries">${t.countries}</div>
+      </div>
+      <div class="tz-item-right">
+        <div class="tz-item-offset" style="display:flex; align-items:center; gap:5px; justify-content:flex-end;">
+          <span>${getLiveOffset(t.tz)}</span>
+          <span class="dst-tag ${dstInfo.isDst?'is-dst':'is-std'}">${dstInfo.label}</span>
+        </div>
+        <div class="tz-item-abbr">${t.abbr}</div>
+      </div>
+    </div>`;
+  });
+  list.innerHTML=html;
+}
+
+function selectTz(tz) {
+  selectedTz=tz;
+  const t=TZ_MAP[tz];
+  const disp=document.getElementById('selected-tz-display');
+  const dstInfo = getDstStatus(tz);
+  disp.innerHTML=t?`Selected: ${getFlag(tz)} ${t.label} (${getLiveOffset(tz)}) <span class="dst-tag ${dstInfo.isDst?'is-dst':'is-std'}" style="margin-left:4px">${dstInfo.label}</span>`:'';
+  buildTzList(document.getElementById('tz-search').value);
+}
+
+function openModal(mode) {
+  modalMode=mode;
+  selectedTz=null;
+  document.getElementById('modal-title').textContent=mode==='clock'?'Add Analog Clock':'Add Table Column';
+  document.getElementById('tz-label').value='';
+  document.getElementById('tz-search').value='';
+  document.getElementById('selected-tz-display').textContent='';
+  buildTzList('');
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('tz-search').focus(),100);
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+function confirmModal() {
+  if(!selectedTz) return;
+  const rawLabel=document.getElementById('tz-label').value.trim();
+  const t=TZ_MAP[selectedTz];
+  const label=rawLabel||(t?`${getFlag(selectedTz)} ${t.abbr}`:selectedTz);
+  if(modalMode==='clock'){
+    if(clocks.find(c=>c.tz===selectedTz)){closeModal();return;}
+    clocks.push({tz:selectedTz,label});
+    renderClocks();
+  } else {
+    if(tableCols.length>=MAX_COLS){closeModal();return;}
+    if(tableCols.find(c=>c.tz===selectedTz)){closeModal();return;}
+    tableCols.push({tz:selectedTz,label});
+    renderTable();
+  }
+  closeModal();
+}
+
+document.getElementById('tz-search').addEventListener('input',function(){
+  buildTzList(this.value);
+});
+document.getElementById('modal-overlay').addEventListener('click',function(e){
+  if(e.target===this) closeModal();
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+
+function updateUTC(){
+  const s=new Date().toUTCString().replace('GMT','UTC');
+  document.getElementById('live-utc').textContent=s.slice(0,s.lastIndexOf(' '));
+}
+
+document.getElementById('time-format-setting').value = globalTimeFormat;
+document.getElementById('clock-style-setting').value = clockStyleView;
+
+renderClocks();
+renderTable();
+renderAlarmsList();
+updateUTC();
+setInterval(()=>{updateClockFaces();updateUTC();checkAlarms();},1000);
+setInterval(()=>{renderTable();},60000);
+</script>
+</body>
+</html>
