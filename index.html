@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>World Clock</title>
+<title>ZA WARUDO!</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⏱</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -17,20 +18,39 @@
   --red:#ff6b6b;--blue:#6eb5ff;--gold:#ffd166;
   --mono:'Space Mono',monospace;--sans:'DM Sans',sans-serif;
 }
-body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;padding:24px;position:relative}
+
+body.light-theme {
+  --bg:#f4f4f8;--surface:#ffffff;--surface2:#eaeaf0;--surface3:#dfdfe6;
+  --border:rgba(0,0,0,0.1);--border2:rgba(0,0,0,0.18);
+  --text:#1a1a20;--muted:#6a697a;--muted2:#8a899a;
+  --accent:#2e7d32;--accent2:#1b5e20;--accent-dim:rgba(46, 125, 50, 0.12);
+}
+
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;padding:24px;position:relative;transition:background 0.3s, color 0.3s}
 header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;padding-bottom:18px;border-bottom:0.5px solid var(--border);flex-wrap:wrap;gap:16px}
 .header-left{display:flex;align-items:center;gap:16px}
 header h1{font-family:var(--mono);font-size:17px;font-weight:700;letter-spacing:-0.5px;color:var(--accent)}
 header span{font-family:var(--mono);font-size:11px;color:var(--muted)}
 .header-controls{display:flex;align-items:center;gap:12px}
 
-.save-banner-btn{background:var(--accent);color:#0d0d0f;font-family:var(--sans);font-size:11px;font-weight:600;padding:4px 10px;border:none;border-radius:6px;cursor:pointer;display:none;align-items:center;gap:4px;transition:background 0.15s,transform 0.1s}
+.save-banner-btn{background:var(--accent);color:#ffffff;font-family:var(--sans);font-size:11px;font-weight:600;padding:4px 10px;border:none;border-radius:6px;cursor:pointer;display:none;align-items:center;gap:4px;transition:background 0.15s,transform 0.1s}
+:root .save-banner-btn{color:#0d0d0f;} /* Keep text dark in dark mode */
+body.light-theme .save-banner-btn{color:#ffffff;} /* White text in light mode for green button */
 .save-banner-btn:hover{background:var(--accent2)}
 .save-banner-btn:active{transform:scale(0.97)}
+
+.theme-toggle-btn{background:transparent;border:0.5px solid var(--border);color:var(--text);border-radius:8px;padding:4px 8px;font-size:14px;cursor:pointer;transition:background 0.15s;}
+.theme-toggle-btn:hover{background:var(--surface2)}
 
 .setting-select-wrap{display:flex;align-items:center;background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:3px 8px;gap:6px}
 .setting-select-wrap label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em}
 .setting-select-wrap select{background:transparent;border:none;color:var(--text);font-family:var(--sans);font-size:11px;font-weight:500;outline:none;cursor:pointer}
+
+/* Fix for standardizing dropdown options visibility across browsers */
+option {
+  background-color: var(--surface);
+  color: var(--text);
+}
 
 .clocks-row{display:flex;gap:14px;margin-bottom:28px;overflow-x:auto;padding-bottom:12px;align-items:stretch}
 .clocks-row::-webkit-scrollbar{height:3px}
@@ -41,6 +61,7 @@ header span{font-family:var(--mono);font-size:11px;color:var(--muted)}
 .clock-card:not(.primary):active {cursor:grabbing}
 .clock-card:hover{border-color:var(--border2)}
 .clock-card.primary{border-color:rgba(200,245,100,0.3)}
+body.light-theme .clock-card.primary{border-color:rgba(46, 125, 50, 0.4)}
 .clock-card.dragging {opacity: 0.4;transform: scale(0.95);border: 0.5px dashed var(--accent)}
 .clock-label{font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);text-align:center;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;user-select:none}
 .clock-card.primary .clock-label{color:var(--accent)}
@@ -51,7 +72,9 @@ header span{font-family:var(--mono);font-size:11px;color:var(--muted)}
 .clock-offset-row{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted);font-family:var(--mono);user-select:none}
 .dst-tag{font-size:8px;font-weight:700;padding:1px 4px;border-radius:4px;letter-spacing:0.03em}
 .dst-tag.is-dst{background:rgba(255,209,102,0.12);color:var(--gold)}
+body.light-theme .dst-tag.is-dst{background:rgba(230,165,20,0.15);color:#d97706}
 .dst-tag.is-std{background:rgba(110,181,255,0.12);color:var(--blue)}
+body.light-theme .dst-tag.is-std{background:rgba(37,99,235,0.1);color:#2563eb}
 .remove-btn{position:absolute;top:7px;right:7px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;line-height:1;padding:2px 4px;border-radius:4px;opacity:0;transition:opacity 0.15s,color 0.15s;z-index:10}
 .clock-card:hover .remove-btn{opacity:1}
 .remove-btn:hover{color:var(--red)}
@@ -71,7 +94,9 @@ header span{font-family:var(--mono);font-size:11px;color:var(--muted)}
 .alarm-field select{cursor:pointer;min-width:180px;max-width:240px}
 .alarm-field input[type="text"]{min-width:200px;flex-grow:1}
 .btn-add-alarm{background:var(--accent-dim);color:var(--accent);border:0.5px solid rgba(200,245,100,0.2);padding:0 20px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;height:38px;transition:all 0.15s;white-space:nowrap}
+body.light-theme .btn-add-alarm{border-color:rgba(46, 125, 50, 0.3);}
 .btn-add-alarm:hover{background:var(--accent);color:#0d0d0f}
+body.light-theme .btn-add-alarm:hover{color:#fff;}
 .alarms-list{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}
 .alarm-item-card{background:var(--surface2);border:0.5px solid var(--border);border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:12px;font-size:12px;font-family:var(--sans)}
 .alarm-item-info{display:flex;flex-direction:column;gap:2px}
@@ -91,8 +116,8 @@ thead th:hover .th-remove{opacity:1}
 .th-remove:hover{color:var(--red)}
 tbody tr{border-bottom:0.5px solid var(--border);transition:background 0.1s}
 tbody tr:last-child{border-bottom:none}
-tbody tr:hover{background:rgba(255,255,255,0.022)}
-tbody tr.highlight{background:rgba(200,245,100,0.04)}
+tbody tr:hover{background:var(--accent-dim)}
+tbody tr.highlight{background:var(--accent-dim); border-left: 2px solid var(--accent);}
 td{padding:9px 14px;font-family:var(--mono);font-size:12px;white-space:nowrap;color:var(--text)}
 td:first-child{font-size:11px;color:var(--muted);font-family:var(--sans);font-weight:400}
 td.current-col{color:var(--accent);font-weight:700}
@@ -128,6 +153,7 @@ td.current-col{color:var(--accent);font-weight:700}
 .modal input[type=text]:focus{border-color:var(--accent)}
 .modal-btns{display:flex;gap:10px;margin-top:22px}
 .btn-primary{flex:1;background:var(--accent);color:#0d0d0f;border:none;border-radius:10px;padding:10px;font-size:13px;font-weight:600;font-family:var(--sans);cursor:pointer;transition:background 0.15s}
+body.light-theme .btn-primary{color:#fff;}
 .btn-primary:hover{background:var(--accent2)}
 .btn-secondary{flex:1;background:none;color:var(--muted);border:0.5px solid var(--border2);border-radius:10px;padding:10px;font-size:13px;font-family:var(--sans);cursor:pointer;transition:color 0.15s}
 .btn-secondary:hover{color:var(--text)}
@@ -143,6 +169,7 @@ td.current-col{color:var(--accent);font-weight:700}
 .alarm-overlay{display:none;position:fixed;inset:0;background:rgba(255,107,107,0.15);backdrop-filter:blur(4px);z-index:10000;align-items:center;justify-content:center;animation:pulseRed 1.5s infinite alternate}
 .alarm-overlay.open{display:flex}
 .alarm-alert-card{background:#1e1414;border:1px solid var(--red);border-radius:20px;padding:32px;width:400px;text-align:center;box-shadow:0 15px 40px rgba(0,0,0,0.6)}
+body.light-theme .alarm-alert-card{background:#fff0f0;}
 .alarm-alert-title{font-size:24px;color:var(--red);font-family:var(--mono);font-weight:700;margin-bottom:8px}
 .alarm-alert-desc{font-size:14px;color:var(--text);margin-bottom:24px}
 .btn-dismiss-alarm{background:var(--red);color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:600;font-family:var(--sans);cursor:pointer;width:100%;transition:background 0.15s}
@@ -174,6 +201,7 @@ td.current-col{color:var(--accent);font-weight:700}
         <option value="24">24 Hour</option>
       </select>
     </div>
+    <button class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Light/Dark Mode">☀️</button>
     <span id="live-utc"></span>
   </div>
 </header>
@@ -459,6 +487,7 @@ let alarms = JSON.parse(localStorage.getItem('saved_world_alarms')) || [];
 
 let globalTimeFormat = localStorage.getItem('saved_time_format') || '12';
 let clockStyleView = localStorage.getItem('saved_clock_style') || 'both';
+let activeTheme = localStorage.getItem('saved_world_theme') || 'dark';
 
 let modalMode = 'clock';
 let selectedTz = null;
@@ -469,18 +498,37 @@ let alarmInterval = null;
 let isAlarmRinging = false;
 const MAX_COLS = 4;
 
+function applyTheme() {
+  const btn = document.getElementById('theme-toggle-btn');
+  if (activeTheme === 'light') {
+    document.body.classList.add('light-theme');
+    btn.textContent = '🌙';
+  } else {
+    document.body.classList.remove('light-theme');
+    btn.textContent = '☀️';
+  }
+}
+
+function toggleTheme() {
+  activeTheme = activeTheme === 'dark' ? 'light' : 'dark';
+  applyTheme();
+  checkUnsavedChanges();
+}
+
 function checkUnsavedChanges() {
   const savedClocks = localStorage.getItem('saved_world_clocks');
   const savedCols = localStorage.getItem('saved_world_table_cols');
   const savedAlarms = localStorage.getItem('saved_world_alarms');
   const savedFormat = localStorage.getItem('saved_time_format') || '12';
   const savedStyle = localStorage.getItem('saved_clock_style') || 'both';
+  const savedTheme = localStorage.getItem('saved_world_theme') || 'dark';
   
   const hasChanges = (JSON.stringify(clocks) !== (savedClocks || JSON.stringify(fallbackClocks))) ||
                      (JSON.stringify(tableCols) !== (savedCols || JSON.stringify(fallbackTableCols))) ||
                      (JSON.stringify(alarms) !== (savedAlarms || JSON.stringify([]))) ||
                      (globalTimeFormat !== savedFormat) ||
-                     (clockStyleView !== savedStyle);
+                     (clockStyleView !== savedStyle) ||
+                     (activeTheme !== savedTheme);
                      
   document.getElementById('save-banner').style.display = hasChanges ? 'inline-flex' : 'none';
 }
@@ -491,6 +539,7 @@ function saveActiveConfig() {
   localStorage.setItem('saved_world_alarms', JSON.stringify(alarms));
   localStorage.setItem('saved_time_format', globalTimeFormat);
   localStorage.setItem('saved_clock_style', clockStyleView);
+  localStorage.setItem('saved_world_theme', activeTheme);
   checkUnsavedChanges();
   showToast();
 }
@@ -757,16 +806,17 @@ function makeClockSVG(tz) {
     const inn=ih?r-8:r-4,out=r-1;
     const x1=cx+inn*Math.cos(a*Math.PI/180),y1=cy+inn*Math.sin(a*Math.PI/180);
     const x2=cx+out*Math.cos(a*Math.PI/180),y2=cy+out*Math.sin(a*Math.PI/180);
-    ticks+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${ih?'rgba(255,255,255,0.5)':'rgba(255,255,255,0.15)'}" stroke-width="${ih?1.5:0.8}"/>`;
+    
+    ticks+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="var(--text)" opacity="${ih?'0.5':'0.15'}" stroke-width="${ih?1.5:0.8}"/>`;
   }
   return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="50" cy="50" r="46" fill="#1a1a20" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+    <circle cx="50" cy="50" r="46" fill="var(--surface)" stroke="var(--border2)" stroke-width="1"/>
     ${ticks}
-    <line x1="50" y1="50" x2="${hx.toFixed(1)}" y2="${hy.toFixed(1)}" stroke="#f0eff4" stroke-width="3.5" stroke-linecap="round"/>
-    <line x1="50" y1="50" x2="${mx.toFixed(1)}" y2="${my.toFixed(1)}" stroke="#f0eff4" stroke-width="2.5" stroke-linecap="round"/>
-    <line x1="50" y1="50" x2="${sx.toFixed(1)}" y2="${sy.toFixed(1)}" stroke="#c8f564" stroke-width="1.5" stroke-linecap="round"/>
-    <circle cx="50" cy="50" r="3" fill="#c8f564"/>
-    <circle cx="50" cy="50" r="1.5" fill="#0d0d0f"/>
+    <line x1="50" y1="50" x2="${hx.toFixed(1)}" y2="${hy.toFixed(1)}" stroke="var(--text)" stroke-width="3.5" stroke-linecap="round"/>
+    <line x1="50" y1="50" x2="${mx.toFixed(1)}" y2="${my.toFixed(1)}" stroke="var(--text)" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="50" y1="50" x2="${sx.toFixed(1)}" y2="${sy.toFixed(1)}" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"/>
+    <circle cx="50" cy="50" r="3" fill="var(--accent)"/>
+    <circle cx="50" cy="50" r="1.5" fill="var(--surface)"/>
   </svg>`;
 }
 
@@ -993,6 +1043,7 @@ function updateUTC(){
 document.getElementById('time-format-setting').value = globalTimeFormat;
 document.getElementById('clock-style-setting').value = clockStyleView;
 
+applyTheme();
 renderClocks();
 renderTable();
 renderAlarmsList();
@@ -1001,6 +1052,4 @@ setInterval(()=>{updateClockFaces();updateUTC();checkAlarms();},1000);
 setInterval(()=>{renderTable();},60000);
 </script>
 </body>
-
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23222'/><circle cx='50' cy='50' r='40' fill='%23fff'/><path d='M50 20 v30 l15 15' stroke='%23222' stroke-width='8' stroke-linecap='round' stroke-linejoin='round' fill='none'/><circle cx='50' cy='50' r='5' fill='%23e74c3c'/></svg>">
 </html>
